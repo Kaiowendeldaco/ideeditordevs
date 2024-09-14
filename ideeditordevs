@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ace.ide Beta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0 20px;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #e74c3c;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            transition: opacity 0.3s ease, height 0.3s ease;
+        }
+        .controls.hidden {
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            margin: 0;
+        }
+        .controls button, .controls select {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .controls button:hover, .controls select:hover {
+            background-color: #2980b9;
+        }
+        #editor-container {
+            flex-grow: 1;
+            display: flex;
+            height: calc(100% - 70px); /* Ajusta a altura considerando a altura dos controles e footer */
+            margin-bottom: 10px;
+        }
+        #editor {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #1e1e1e;
+            color: #f8f8f2;
+            height: 100%;
+        }
+        #output {
+            width: 40%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 100%;
+            margin-left: 10px;
+        }
+        footer {
+            background-color: transparent; /* Torna o fundo transparente */
+            color: #333;
+            text-align: center;
+            padding: 10px;
+            position: relative;
+            width: 100%;
+            border-top: none; /* Remove a borda superior */
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            #editor-container {
+                flex-direction: column;
+                height: 60%;
+            }
+            #output {
+                width: 100%;
+                height: 30vh;
+                margin-left: 0;
+                margin-top: 10px;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button id="toggle-controls" class="controls-toggle">Show Controls</button>
+
+    <div class="controls hidden" id="controls">
+        <button id="new-file">New File</button>
+        <button id="save-file">Save Project</button>
+        <button id="run-code">Run Code</button>
+        <button id="delete-project">Delete Project</button>
+        <select id="saved-projects">
+            <option value="">Select a Project</option>
+        </select>
+        <select id="font-size">
+            <option value="2pt">2pt</option>
+            <option value="5pt">5pt</option>
+            <option value="7pt">7pt</option>
+            <option value="10pt">10pt</option>
+            <option value="12pt">12pt</option>
+            <option value="14pt" selected>14pt</option>
+            <option value="16pt">16pt</option>
+            <option value="18pt">18pt</option>
+            <option value="20pt">20pt</option>
+        </select>
+        <button id="fullscreen-toggle">Fullscreen</button>
+        <select id="language-select">
+            <option value="en">English</option>
+            <option value="pt">Português</option>
+            <option value="es">Español</option>
+            <option value="ru">Русский</option>
+        </select>
+    </div>
+
+    <div id="editor-container">
+        <div id="editor">Write your code here</div>
+        <iframe id="output"></iframe>
+    </div>
+
+    <footer>
+        <p id="footer-text"></p>
+    </footer>
+</div>
+
+<!-- Importando a biblioteca Ace.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
+
+<script>
+    // Inicializando o editor Ace
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/html");
+    editor.setOptions({
+        fontSize: "14pt",
+        showPrintMargin: false,
+        highlightActiveLine: true,
+        wrap: true
+    });
+
+    // Traduções
+    const translations = {
+        en: {
+            showControls: "Show Controls",
+            newFile: "New File",
+            saveFile: "Save Project",
+            runCode: "Run Code",
+            deleteProject: "Delete Project",
+            selectProject: "Select a Project",
+            fullscreen: "Fullscreen",
+            poweredBy: ""
+        },
+        pt: {
+            showControls: "Mostrar Controles",
+            newFile: "Novo Arquivo",
+            saveFile: "Salvar Projeto",
+            runCode: "Executar Código",
+            deleteProject: "Excluir Projeto",
+            selectProject: "Selecionar um Projeto",
+            fullscreen: "Tela Cheia",
+            poweredBy: ""
+        },
+        es: {
+            showControls: "Mostrar Controles",
+            newFile: "Nuevo Archivo",
+            saveFile: "Guardar Proyecto",
+            runCode: "Ejecutar Código",
+            deleteProject: "Eliminar Proyecto",
+            selectProject: "Seleccionar un Proyecto",
+            fullscreen: "Pantalla Completa",
+            poweredBy: ""
+        },
+        ru: {
+            showControls: "Показать Управление",
+            newFile: "Новый Файл",
+            saveFile: "Сохранить Проект",
+            runCode: "Запустить Код",
+            deleteProject: "Удалить Проект",
+            selectProject: "Выбрать Проект",
+            fullscreen: "На весь Экран",
+            poweredBy: ""
+        }
+    };
+
+    // Atualiza o texto baseado no idioma selecionado
+    function updateLanguage(language) {
+        const translation = translations[language] || translations.en;
+        document.getElementById('toggle-controls').textContent = translation.showControls;
+        document.getElementById('new-file').textContent = translation.newFile;
+        document.getElementById('save-file').textContent = translation.saveFile;
+        document.getElementById('run-code').textContent = translation.runCode;
+        document.getElementById('delete-project').textContent = translation.deleteProject;
+        document.getElementById('saved-projects').options[0].textContent = translation.selectProject;
+        document.getElementById('fullscreen-toggle').textContent = translation.fullscreen;
+        document.getElementById('footer-text').textContent = translation.poweredBy;
+    }
+
+    // Função para criar novo arquivo
+    document.getElementById('new-file').addEventListener('click', function() {
+        editor.setValue(''); // Limpa o editor
+    });
+
+    // Função para salvar o projeto
+    document.getElementById('save-file').addEventListener('click', function() {
+        var projectName = prompt("Digite o nome do projeto:");
+        if (projectName) {
+            localStorage.setItem(projectName, editor.getValue()); // Salva no localStorage
+            updateSavedProjects();
+            alert("Projeto salvo!");
+        }
+    });
+
+    // Atualizar a lista de projetos salvos
+    function updateSavedProjects() {
+        var select = document.getElementById('saved-projects');
+        select.innerHTML = '<option value="">' + (translations[document.getElementById('language-select').value]?.selectProject || translations.en.selectProject) + '</option>';
+        for (var i = 0; i < localStorage.length; i++) {
+            var key = localStorage.key(i);
+            var option = document.createElement('option');
+            option.value = key;
+            option.textContent = key;
+            select.appendChild(option);
+        }
+    }
+
+    // Carregar projeto salvo
+    document.getElementById('saved-projects').addEventListener('change', function() {
+        var projectName = this.value;
+        if (projectName) {
+            var projectCode = localStorage.getItem(projectName);
+            editor.setValue(projectCode, -1); // -1 para não mover o cursor
+        }
+    });
+
+// Função para executar o código no iframe
+    document.getElementById('run-code').addEventListener('click', function() {
+        var iframe = document.getElementById('output');
+        iframe.srcdoc = editor.getValue();
+    });
+
+    // Função para alternar a visibilidade dos controles
+    document.getElementById('toggle-controls').addEventListener('click', function() {
+        var controls = document.getElementById('controls');
+        if (controls.classList.contains('hidden')) {
+            controls.classList.remove('hidden');
+            this.textContent = translations[document.getElementById('language-select').value]?.showControls || translations.en.showControls;
+        } else {
+            controls.classList.add('hidden');
+            this.textContent = translations[document.getElementById('language-select').value]?.showControls || translations.en.showControls;
+        }
+    });
+
+    // Função para alternar o modo de tela cheia
+    document.getElementById('fullscreen-toggle').addEventListener('click', function() {
+        var isFullscreen = document.fullscreenElement;
+        if (isFullscreen) {
+            document.exitFullscreen();
+        } else {
+            document.documentElement.requestFullscreen();
+        }
+    });
+
+    // Atualizar o tamanho da fonte do editor
+    document.getElementById('font-size').addEventListener('change', function() {
+        var fontSize = this.value;
+        editor.setOptions({ fontSize: fontSize });
+    });
+
+    // Atualizar o idioma ao selecionar uma nova opção
+    document.getElementById('language-select').addEventListener('change', function() {
+        var selectedLanguage = this.value;
+        updateLanguage(selectedLanguage);
+    });
+
+    // Função para excluir o projeto selecionado
+    document.getElementById('delete-project').addEventListener('click', function() {
+        var select = document.getElementById('saved-projects');
+        var projectName = select.value;
+        if (projectName) {
+            if (confirm("Are you sure you want to delete this project?")) {
+                localStorage.removeItem(projectName); // Remove do localStorage
+                updateSavedProjects();
+                alert("Project deleted!");
+            }
+        } else {
+            alert("Please select a project to delete.");
+        }
+    });
+
+    // Inicializar a interface com o idioma padrão
+    updateLanguage(document.getElementById('language-select').value);
+    updateSavedProjects();
+</script>
+
+</body>
+</html>
